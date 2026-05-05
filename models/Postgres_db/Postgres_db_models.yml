@@ -150,7 +150,7 @@ models:
         description: Estado de la promoción.
         data_tests:
           - accepted_values:
-              values: ['active', 'inactive']
+            values: ['active', 'inactive']
       - name: discount
         description: Descuento aplicado por la promoción.
         data_tests:

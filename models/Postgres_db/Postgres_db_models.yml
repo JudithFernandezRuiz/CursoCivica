@@ -40,3 +40,133 @@ models:
           - type: not_null   
         description: >
           Date that the data was loaded.
+
+  - name: stg_postgres__ORDERS
+    description: Staging model for orders from Postgres source.
+    columns:
+      - name: order_id
+        description: PK, identificador único de cada pedido.
+        data_tests:
+          - unique
+          - not_null
+      - name: user_id
+        description: FK a stg_postgres__USER.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_postgres__USER')
+              field: user_id
+      - name: address_id
+        description: FK a stg_postgres__addresses.
+        data_tests:
+          - relationships:
+              to: ref('stg_postgres__addresses')
+              field: address_id
+      - name: status
+        description: Estado actual del pedido.
+        data_tests:
+          - accepted_values:
+              values: ['delivered', 'preparing', 'shipped']
+
+  - name: stg_postgres__USER
+    description: Staging model for users from Postgres source.
+    columns:
+      - name: user_id
+        description: PK, identificador único de usuario.
+        data_tests:
+          - unique
+          - not_null
+      - name: email
+        description: Email del usuario, único.
+        data_tests:
+          - unique
+          - not_null
+
+  - name: stg_postgres__PRODUCTS
+    description: Staging model for products from Postgres source.
+    columns:
+      - name: product_id
+        description: PK, identificador único de producto.
+        data_tests:
+          - unique
+          - not_null
+      - name: name
+        description: Nombre del producto.
+        data_tests:
+          - not_null
+      - name: price
+        description: Precio del producto.
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 10000
+
+  - name: stg_postgres__ORDERITEMS
+    description: Staging model for order line items from Postgres source.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - order_id
+            - product_id
+    columns:
+      - name: order_id
+        description: FK a stg_postgres__ORDERS.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_postgres__ORDERS')
+              field: order_id
+      - name: product_id
+        description: FK a stg_postgres__PRODUCTS.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_postgres__PRODUCTS')
+              field: product_id
+      - name: quantity
+        description: Número de unidades pedidas.
+        data_tests:
+          - not_null
+
+  - name: stg_postgres__addresses
+    description: Staging model for addresses from Postgres source.
+    columns:
+      - name: address_id
+        description: PK, identificador único de dirección.
+        data_tests:
+          - unique
+          - not_null
+
+  - name: stg_postgres__PROMOS
+    description: Staging model for promotions from Postgres source.
+    columns:
+      - name: promo_id
+        description: PK, identificador único de promoción.
+        data_tests:
+          - unique
+          - not_null
+      - name: status
+        description: Estado de la promoción.
+        data_tests:
+          - accepted_values:
+            values: ['active', 'inactive']
+      - name: discount
+        description: Descuento aplicado por la promoción.
+        data_tests:
+          - not_null
+
+unit_tests:
+  - name: test_status_es_translation
+    model: stg_postgres__ORDERS
+    given:
+      - input: source('postgres', 'ORDERS')
+        rows:
+          - {order_id: '1', status: 'delivered', shipping_service: null, shipping_cost: null, address_id: null, created_at: null, promo_id: null, estimated_delivery_at: null, order_cost: null, user_id: null, order_total: null, delivered_at: null, tracking_id: null, _fivetran_deleted: null, _fivetran_synced: null}
+          - {order_id: '2', status: 'shipped', shipping_service: null, shipping_cost: null, address_id: null, created_at: null, promo_id: null, estimated_delivery_at: null, order_cost: null, user_id: null, order_total: null, delivered_at: null, tracking_id: null, _fivetran_deleted: null, _fivetran_synced: null}
+          - {order_id: '3', status: 'preparing', shipping_service: null, shipping_cost: null, address_id: null, created_at: null, promo_id: null, estimated_delivery_at: null, order_cost: null, user_id: null, order_total: null, delivered_at: null, tracking_id: null, _fivetran_deleted: null, _fivetran_synced: null}
+    expect:
+      rows:
+          - {order_id: '1', status_es: 'completado'}
+          - {order_id: '2', status_es: 'en camino'}
+          - {order_id: '3', status_es: 'pendiente'}    

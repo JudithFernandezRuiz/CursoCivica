@@ -22,6 +22,14 @@ renamed as (
         delivered_at,
         tracking_id,
         status,
+        
+        -- columna calculada para el unit test
+        case
+            when status = 'delivered' then 'completado'
+            when status = 'shipped'   then 'en camino'
+            else 'pendiente'
+        end as status_es,
+        
         _fivetran_deleted,
         _fivetran_synced
 
